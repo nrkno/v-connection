@@ -1,0 +1,38 @@
+import { VRundown, VTemplate, InternalElement, ExternalElement, VElement, ExternalElementId } from './v-connection';
+import { CommandResult } from './msehttp';
+import { PepResponse } from './peptalk';
+import { MSERep } from './mse';
+export declare class Rundown implements VRundown {
+    readonly show: string;
+    readonly playlist: string;
+    readonly profile: string;
+    readonly description: string;
+    private readonly mse;
+    private get pep();
+    private msehttp;
+    private channelMap;
+    private initialChannelMapPromise;
+    constructor(mseRep: MSERep, show: string, profile: string, playlist: string, description: string);
+    private static makeKey;
+    private buildChannelMap;
+    private ref;
+    listTemplates(): Promise<string[]>;
+    getTemplate(templateName: string): Promise<VTemplate>;
+    createElement(templateName: string, elementName: string, textFields: string[], channel?: string): Promise<InternalElement>;
+    createElement(vcpid: number, channel?: string, alias?: string): Promise<ExternalElement>;
+    listElements(): Promise<Array<string | ExternalElementId>>;
+    activate(twice?: boolean, initShow?: boolean, initPlaylist?: boolean): Promise<CommandResult>;
+    deactivate(cleanupShow?: boolean): Promise<CommandResult>;
+    cleanup(): Promise<CommandResult>;
+    deleteElement(elementName: string | number, channel?: string): Promise<PepResponse>;
+    cue(elementName: string | number, channel?: string): Promise<CommandResult>;
+    take(elementName: string | number, channel?: string): Promise<CommandResult>;
+    continue(elementName: string | number, channel?: string): Promise<CommandResult>;
+    continueReverse(elementName: string | number, channel?: string): Promise<CommandResult>;
+    out(elementName: string | number, channel?: string): Promise<CommandResult>;
+    initialize(elementName: number, channel?: string): Promise<CommandResult>;
+    purge(elementsToKeep?: ExternalElementId[]): Promise<PepResponse>;
+    getElement(elementName: string | number, channel?: string): Promise<VElement>;
+    isActive(): Promise<boolean>;
+    private getExternalElementPath;
+}

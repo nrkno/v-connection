@@ -671,7 +671,12 @@ class PepTalk extends EventEmitter implements PepTalkClient, PepTalkJS {
 
 	async getJS(path: string, depth?: number): Promise<PepResponseJS> {
 		const result: PepResponseJS = (await this.get(path, depth)) as PepResponseJS
-		result.js = await Xml2JS.parseStringPromise(result.body)
+		try {
+			result.js = await Xml2JS.parseStringPromise(result.body)
+		} catch (e) {
+			console.log('Exception when xml parsing: ' + result.body)
+			throw e
+		}
 		return result
 	}
 }
