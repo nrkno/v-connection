@@ -395,7 +395,7 @@ class PepTalk extends EventEmitter implements PepTalkClient, PepTalkJS {
 		}
 		// console.log('SAF >>>', split)
 		if (this.leftovers) {
-			this.leftovers.previous = this.leftovers.previous + split[0]
+			this.leftovers.previous = this.leftovers.previous + (split[0] || leftovers?.previous)
 			if (Array.isArray(split) && split.length > 0) {
 				this.leftovers.remaining -= Buffer.byteLength(split[0], 'utf8')
 			}
