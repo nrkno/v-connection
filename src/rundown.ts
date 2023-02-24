@@ -65,6 +65,13 @@ export class Rundown implements VRundown {
 			? `${elementId.vcpid}_${elementId.channel ?? ''}`
 			: `${elementId.showId}_${elementId.instanceName}`
 	}
+	private static makeKeySet(elementIds: ElementId[]): Set<string> {
+		return new Set(
+			elementIds.map((e) => {
+				return Rundown.makeKey(e)
+			})
+		)
+	}
 
 	private async buildChannelMap(elementId?: ExternalElementId): Promise<boolean> {
 		if (elementId && has(this.channelMap, Rundown.makeKey(elementId))) {
@@ -455,48 +462,46 @@ ${entries}
 		onlyCreatedByUs?: boolean,
 		elementsToKeep: InternalElementId[] = []
 	): Promise<PepResponse> {
-		const elementsToKeepSet = new Set(
-			elementsToKeep.map((e) => {
-				return Rundown.makeKey(e)
-			})
-		)
+		const elementsToKeepSet = Rundown.makeKeySet(elementsToKeep)
+
+		const elementsToDelete: InternalElementIdWithCreator[] = []
 		for (const showId of showIds) {
 			const elements = await this.listInternalElements(showId)
-			await Promise.all(
-				elements.map(async (element) => {
-					if (
-						(!onlyCreatedByUs || element.creator === CREATOR_NAME) &&
-						!elementsToKeepSet.has(Rundown.makeKey(element))
-					) {
-						await this.deleteElement(element)
-					}
-				})
-			)
+			for (const element of elements) {
+				if (
+					(!onlyCreatedByUs || element.creator === CREATOR_NAME) &&
+					!elementsToKeepSet.has(Rundown.makeKey(element))
+				) {
+					elementsToDelete.push(element)
+				}
+			}
 		}
+
+		const deletePromises: Promise<any>[] = elementsToDelete.map(async (element) => this.deleteElement(element))
+		await Promise.allSettled(deletePromises) // Wait for all Promises
+		await Promise.all(deletePromises) // throw if there are any rejected Promises
+
 		return { id: '*', status: 'ok' } as PepResponse
 	}
 
 	async purgeExternalElements(elementsToKeep: ExternalElementId[] = []): Promise<PepResponse> {
 		await this.buildChannelMap()
-		const elementsSet = new Set(
-			elementsToKeep.map((e) => {
-				return Rundown.makeKey(e)
-			})
-		)
+		const elementsToKeepSet = Rundown.makeKeySet(elementsToKeep)
 
-		await Promise.all(
-			Object.keys(this.channelMap).map(async (key) => {
-				if (elementsSet.has(key)) return
+		const deletePromises: Promise<void>[] = Object.keys(this.channelMap).map(async (key) => {
+			if (elementsToKeepSet.has(key)) return
 
-				try {
-					await this.deleteElement(this.channelMap[key])
-				} catch (e) {
-					if (!(e instanceof InexistentError)) {
-						throw e
-					}
+			try {
+				await this.deleteElement(this.channelMap[key])
+			} catch (e) {
+				if (!(e instanceof InexistentError)) {
+					throw e
 				}
-			})
-		)
+			}
+		})
+
+		await Promise.allSettled(deletePromises) // Wait for all Promises
+		await Promise.all(deletePromises) // throw if there are any rejected Promises
 
 		return { id: '*', status: 'ok' } as PepResponse
 	}
