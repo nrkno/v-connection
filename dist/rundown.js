@@ -33,6 +33,11 @@ class Rundown {
             ? `${elementId.vcpid}_${elementId.channel ?? ''}`
             : `${elementId.showId}_${elementId.instanceName}`;
     }
+    static makeKeySet(elementIds) {
+        return new Set(elementIds.map((e) => {
+            return Rundown.makeKey(e);
+        }));
+    }
     async buildChannelMap(elementId) {
         if (elementId && (0, util_1.has)(this.channelMap, Rundown.makeKey(elementId))) {
             return true;
@@ -349,27 +354,27 @@ ${entries}
         }
     }
     async purgeInternalElements(showIds, onlyCreatedByUs, elementsToKeep = []) {
-        const elementsToKeepSet = new Set(elementsToKeep.map((e) => {
-            return Rundown.makeKey(e);
-        }));
+        const elementsToKeepSet = Rundown.makeKeySet(elementsToKeep);
+        const elementsToDelete = [];
         for (const showId of showIds) {
             const elements = await this.listInternalElements(showId);
-            await Promise.all(elements.map(async (element) => {
+            for (const element of elements) {
                 if ((!onlyCreatedByUs || element.creator === mse_1.CREATOR_NAME) &&
                     !elementsToKeepSet.has(Rundown.makeKey(element))) {
-                    await this.deleteElement(element);
+                    elementsToDelete.push(element);
                 }
-            }));
+            }
         }
+        const deletePromises = elementsToDelete.map(async (element) => this.deleteElement(element));
+        await Promise.allSettled(deletePromises); // Wait for all Promises
+        await Promise.all(deletePromises); // throw if there are any rejected Promises
         return { id: '*', status: 'ok' };
     }
     async purgeExternalElements(elementsToKeep = []) {
         await this.buildChannelMap();
-        const elementsSet = new Set(elementsToKeep.map((e) => {
-            return Rundown.makeKey(e);
-        }));
-        await Promise.all(Object.keys(this.channelMap).map(async (key) => {
-            if (elementsSet.has(key))
+        const elementsToKeepSet = Rundown.makeKeySet(elementsToKeep);
+        const deletePromises = Object.keys(this.channelMap).map(async (key) => {
+            if (elementsToKeepSet.has(key))
                 return;
             try {
                 await this.deleteElement(this.channelMap[key]);
@@ -379,7 +384,9 @@ ${entries}
                     throw e;
                 }
             }
-        }));
+        });
+        await Promise.allSettled(deletePromises); // Wait for all Promises
+        await Promise.all(deletePromises); // throw if there are any rejected Promises
         return { id: '*', status: 'ok' };
     }
     async getElement(elementId) {

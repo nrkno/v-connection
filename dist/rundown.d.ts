@@ -13,6 +13,7 @@ export declare class Rundown implements VRundown {
     private initialChannelMapPromise;
     constructor(mseRep: MSERep, profile: string, playlist: string, description: string);
     private static makeKey;
+    private static makeKeySet;
     private buildChannelMap;
     private ref;
     listTemplates(showId: string): Promise<string[]>;
